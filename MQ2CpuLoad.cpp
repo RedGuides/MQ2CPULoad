@@ -68,8 +68,8 @@ typedef struct
 	int		Foreground;
 } trCPUDATA;
 
-#define   MAX_CORES					12				// Max number of Cpu cores to track
-#define   MAX_LIST					24				// Max number of EQ instances to track
+#define   MAX_CORES					16				// Max number of Cpu cores to track
+#define   MAX_LIST					36				// Max number of EQ instances to track
 #define   CLIENT_DISCONNECTED		120000			// How long to wait for a client before calling it dead.
 #define   CLIENT_BUSY				3000			// How long to wait for a client to be marked busy.
 #define   BALANCE_TIME_FG			6000			// Foreground instance will balance cores every 6s
@@ -83,8 +83,8 @@ typedef struct
 #pragma comment(linker, "/SECTION:.shr,RWS")
 #pragma data_seg(".shr")
 
-trCPUDATA eqList[MAX_LIST] = { {0,0,0,0,0,0}, {0,0,0,0,0,0}, {0,0,0,0,0,0} };
-int       cpuLoad[MAX_CORES] = { 0,0,0,0,0,0,0,0,0,0,0,0 };
+trCPUDATA eqList[MAX_LIST] = { {0,0,0,0,0,0}, {0,0,0,0,0,0}, {0,0,0,0,0,0}, { 0,0,0,0,0,0 }, { 0,0,0,0,0,0 }, { 0,0,0,0,0,0 } };
+int       cpuLoad[MAX_CORES] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 DWORD     cpuLoadUpdated = 0;
 DWORD     cpuLoadBalanced = 0;
 int		  cpuReporting    = 1;
