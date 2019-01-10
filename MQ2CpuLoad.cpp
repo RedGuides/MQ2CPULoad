@@ -1,6 +1,6 @@
 /********************************************************************************
 ****
-**  	MQ2CpuLoad.cpp : Original code by Dewey2461
+**		MQ2CpuLoad.cpp : Original code by Dewey2461
 ****	
 *********************************************************************************
 ****
@@ -45,7 +45,10 @@
 **		2012-11-25 by Dewey2461 v 1.0
 **			 - Initial coding and testing done on Vista 64 bit with a quad core cpu.
 **		2012-11-26 removed dependancy on MQ2FPS. 
+**		2013-01-07 fixed bug that caused clients to be removed when at server select
 **
+**      2.0 - Eqmule 07-22-2016 - Added string safety.
+**      2.1 - SwiftyMUSE 01-07-2019 Removed foreground detection since its in core
 ****
 ********************************************************************************/
 
@@ -53,7 +56,7 @@
 
 
 PreSetup("MQ2CpuLoad");
-
+PLUGIN_VERSION(2.1);
 
 typedef struct
 {
@@ -83,9 +86,9 @@ typedef struct
 #pragma comment(linker, "/SECTION:.shr,RWS")
 #pragma data_seg(".shr")
 
-trCPUDATA eqList[MAX_LIST] = { {0,0,0,0,0,0}, {0,0,0,0,0,0}, {0,0,0,0,0,0}, { 0,0,0,0,0,0 }, { 0,0,0,0,0,0 }, { 0,0,0,0,0,0 } };
-int       cpuLoad[MAX_CORES] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
-DWORD     cpuLoadUpdated = 0;
+trCPUDATA eqList[MAX_LIST] = { {0,0,0,0,0,0}, {0,0,0,0,0,0}, {0,0,0,0,0,0} };
+int       cpuLoad[MAX_CORES] = { 0,0,0,0,0,0,0,0,0,0,0,0 };
+DWORD     cpuLoadUpdated  = 0;
 DWORD     cpuLoadBalanced = 0;
 int		  cpuReporting    = 1;
 int		  cpuAutoBalance  = 1;
@@ -107,30 +110,18 @@ int			SpewLevel		= 1;
 float      *pMQFPS			= NULL;
 bool       *pMQForeground	= NULL;
 
-typedef HWND   (__stdcall *fEQW_GetDisplayWindow)(VOID);
-fEQW_GetDisplayWindow		EQW_GetDisplayWindow=0;
-
-void GetDisplayWindowAddr()
-{
-	HMODULE		EQWhMod			= 0;
-	if (EQWhMod=GetModuleHandle("eqw.dll"))
-	{
-		EQW_GetDisplayWindow=(fEQW_GetDisplayWindow)GetProcAddress(EQWhMod,"EQW_GetDisplayWindow");
-	}
-}
-
 void CpuLoadRemoveDead(void)
 {
 	int i;
 	for (i=0; i<MAX_LIST; i++)
 	{
-		if (cpuLoadUpdated > eqList[i].LastUpdate + CLIENT_DISCONNECTED)
+		if (eqList[i].LastUpdate && cpuLoadUpdated > eqList[i].LastUpdate + CLIENT_DISCONNECTED)
 		{
+			if (cpuReporting) WriteChatf("MQ2CpuLoad::RemoveDead::%s has timed out",eqList[i].CharName);
 			memset(&eqList[i],0,sizeof(trCPUDATA));
 		}
 	}
 }
-
 
 void CpuLoadCalculate(DWORD tick)
 {
@@ -237,12 +228,17 @@ void CpuLoadBalance(void)
 	}
 }
 
+void CpuLoadINIT(void);
 void CpuLoadShowHelp(int ShowHelp,int ShowStatus);
 
 void CpuLoadUpdate(DWORD tick,int name,int cpu,int load)
 {
 	if (myCpuData && myProcessID && myProcessHandle)
 	{
+		if (myCpuData->ProcessID != myProcessID)
+		{
+			CpuLoadINIT();
+		}
 		//if (cpuReporting) WriteChatf("MQ2CpuLoad::CpuLoadUpdate tick = %d ",myCpuData->LastUpdate);
 		if (cpu) 
 		{
@@ -253,7 +249,7 @@ void CpuLoadUpdate(DWORD tick,int name,int cpu,int load)
 		{
 			PCHARINFO pCharInfo=GetCharInfo();
 			if (pCharInfo) 
-				strncpy_s(myCpuData->CharName,pCharInfo->Name,15);
+				strcpy_s(myCpuData->CharName,pCharInfo->Name);
 			else
 				sprintf_s(myCpuData->CharName,"%d",myCpuData->ProcessID);
 		}
@@ -298,8 +294,6 @@ void CpuLoadINIT(void)
 		}
 	}
 }
-
-
 
 
 void CpuLoadShowHelp(int ShowHelp,int ShowStatus)
@@ -461,7 +455,6 @@ PLUGIN_API VOID InitializePlugin(VOID)
 {
     DebugSpewAlways("Initializing MQ2CpuLoad");
 	AddCommand("/cpu",CpuLoadCommand);
-	GetDisplayWindowAddr();
 	CpuLoadINIT();
 
 
@@ -519,19 +512,14 @@ PLUGIN_API VOID OnPulse(VOID)
 	if (tick - tock > 500)
 	{
 		if (myCpuData)
-			myCpuData->FPS = (float)1000.0 * frame / ( (float)1.0 * tick - tock);
+			myCpuData->FPS = (float)1000.0 * frame / (float)( 1.0 * tick - tock);
 		tock = tick;
 		frame = 0;
 	}
 	frame++;
 
 	if (!myCpuData) return;
-	myCpuData->Foreground = 0;
-
-	// Code for finding if the window has focus taken from MQ2FPS 
-    HWND EQhWnd=*(HWND*)EQADDR_HWND;
-    if (EQW_GetDisplayWindow)		EQhWnd=EQW_GetDisplayWindow();
-	myCpuData->Foreground = (GetForegroundWindow()==EQhWnd );
+	myCpuData->Foreground = gbInForeground;
 
 	if (tick > myCpuData->LastUpdate + 1000) {
 		CpuLoadUpdate(tick,FALSE,FALSE,FALSE);
@@ -544,3 +532,4 @@ PLUGIN_API VOID OnPulse(VOID)
 	}
 
 }
+
