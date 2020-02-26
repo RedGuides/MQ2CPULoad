@@ -63,7 +63,7 @@ typedef struct
 	HANDLE	ProcessHandle;
 	DWORD   AffinityMask;
 	DWORD   MoveRequst;
-	unsigned long long LastUpdate;
+	uint64_t LastUpdate;
 	char    CharName[20];
 	float	FPS;
 	int     Priority;
@@ -87,8 +87,8 @@ constexpr auto BALANCE_TIME_BG = 12000;        // If none are active balance eve
 
 trCPUDATA eqList[MAX_LIST] = { {0,0,0,0,0,0}, {0,0,0,0,0,0}, {0,0,0,0,0,0} };
 int       cpuLoad[MAX_CORES] = { 0,0,0,0,0,0,0,0,0,0,0,0 };
-unsigned long long cpuLoadUpdated  = 0;
-unsigned long long cpuLoadBalanced = 0;
+uint64_t cpuLoadUpdated  = 0;
+uint64_t cpuLoadBalanced = 0;
 int		  cpuReporting    = 1;
 int		  cpuAutoBalance  = 1;
 
@@ -121,7 +121,7 @@ void CpuLoadRemoveDead(void)
 	}
 }
 
-void CpuLoadCalculate(unsigned long long tick)
+void CpuLoadCalculate(uint64_t tick)
 {
 	if (tick < cpuLoadUpdated + 500) return;
 	cpuLoadUpdated = tick;
@@ -227,7 +227,7 @@ void CpuLoadBalance(void)
 void CpuLoadINIT();
 void CpuLoadShowHelp(bool ShowHelp, bool ShowStatus);
 
-void CpuLoadUpdate(unsigned long long tick, bool name, bool cpu, bool load)
+void CpuLoadUpdate(uint64_t tick, bool name, bool cpu, bool load)
 {
 	if (myCpuData && myProcessID && myProcessHandle)
 	{
@@ -269,7 +269,7 @@ void CpuLoadINIT(void)
 {
 	int i;
 	SYSTEM_INFO SystemInfo;
-	const unsigned long long tick = GetTickCount64();
+	const uint64_t tick = GetTickCount64();
 	myProcessHandle = GetCurrentProcess();
 	myProcessID		= GetCurrentProcessId();
 	GetSystemInfo(&SystemInfo);
@@ -489,8 +489,8 @@ PLUGIN_API VOID SetGameState(DWORD GameState)
 // This is called every time MQ pulses
 PLUGIN_API VOID OnPulse(VOID)
 {
-	static unsigned long long tick  = 0;
-	static unsigned long long tock  = 0;
+	static uint64_t tick  = 0;
+	static uint64_t tock  = 0;
 	static int frame = 0;
 
 	tick = GetTickCount64();
