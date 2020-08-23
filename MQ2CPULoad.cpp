@@ -70,12 +70,12 @@ typedef struct
 	int		Foreground;
 } trCPUDATA;
 
-constexpr auto MAX_CORES = 16;                 // Max number of Cpu cores to track
-constexpr auto MAX_LIST = 36;                  // Max number of EQ instances to track
-constexpr auto CLIENT_DISCONNECTED = 120000;   // How long to wait for a client before calling it dead.
-constexpr auto CLIENT_BUSY = 3000;             // How long to wait for a client to be marked busy.
-constexpr auto BALANCE_TIME_FG = 6000;         // Foreground instance will balance cores every 6s
-constexpr auto BALANCE_TIME_BG = 12000;        // If none are active balance every 12s 
+constexpr int MAX_CORES = 16;                 // Max number of Cpu cores to track
+constexpr int MAX_LIST = 36;                  // Max number of EQ instances to track
+constexpr int CLIENT_DISCONNECTED = 120000;   // How long to wait for a client before calling it dead.
+constexpr int CLIENT_BUSY = 3000;             // How long to wait for a client to be marked busy.
+constexpr int BALANCE_TIME_FG = 6000;         // Foreground instance will balance cores every 6s
+constexpr int BALANCE_TIME_BG = 12000;        // If none are active balance every 12s 
 
 /********************************************************************************
 ****
@@ -85,7 +85,7 @@ constexpr auto BALANCE_TIME_BG = 12000;        // If none are active balance eve
 #pragma comment(linker, "/SECTION:.shr,RWS")
 #pragma data_seg(".shr")
 
-trCPUDATA eqList[MAX_LIST] = { {0,0,0,0,0,0}, {0,0,0,0,0,0}, {0,0,0,0,0,0} };
+trCPUDATA eqList[MAX_LIST] = { {0, nullptr, 0, 0, 0, {0}, 0, 0, 0}, {0, nullptr, 0, 0, 0, {0}, 0, 0, 0}, {0, nullptr, 0, 0, 0, {0}, 0, 0, 0} };
 int       cpuLoad[MAX_CORES] = { 0,0,0,0,0,0,0,0,0,0,0,0 };
 uint64_t cpuLoadUpdated  = 0;
 uint64_t cpuLoadBalanced = 0;
@@ -101,17 +101,17 @@ int		  cpuAutoBalance  = 1;
 
 HANDLE		myProcessHandle = 0;
 DWORD		myProcessID		= 0;
-trCPUDATA  *myCpuData		= NULL;
+trCPUDATA  *myCpuData		= nullptr;
 
 int	        myCores			= 1;
 int			SpewLevel		= 1;
 
-float      *pMQFPS			= NULL;
-bool       *pMQForeground	= NULL;
+float      *pMQFPS			= nullptr;
+bool       *pMQForeground	= nullptr;
 
-void CpuLoadRemoveDead(void)
+void CpuLoadRemoveDead()
 {
-	for (int i = 0; i  <MAX_LIST; i++)
+	for (int i = 0; i  <MAX_LIST; ++i)
 	{
 		if (eqList[i].LastUpdate && cpuLoadUpdated > eqList[i].LastUpdate + CLIENT_DISCONNECTED)
 		{
@@ -132,7 +132,7 @@ void CpuLoadCalculate(uint64_t tick)
 	{
 		if (i.ProcessID)
 		{
-			unsigned long m = 1;
+			unsigned int m = 1;
 			for (int n=0; n < myCores; ++n)
 			{
 				if (i.AffinityMask==m)
@@ -152,7 +152,7 @@ void CpuLoadCalculate(uint64_t tick)
 ****
 ********************************************************************************/
 
-void CpuLoadBalance(void)
+void CpuLoadBalance()
 {
 	int c = 0;		// active eq [C]lients 
 	int d = 0;		// sum of v[x] 
@@ -265,7 +265,7 @@ void CpuLoadUpdate(uint64_t tick, bool name, bool cpu, bool load)
 }
 
 
-void CpuLoadINIT(void)
+void CpuLoadINIT()
 {
 	int i;
 	SYSTEM_INFO SystemInfo;
@@ -388,7 +388,7 @@ void CpuLoadSet(int c)
 
 
 
-void LoadINIFile(void)
+void LoadINIFile()
 {
 	char szTemp[256];
 	char  *pName = GetCharInfo()->Name;
@@ -399,7 +399,7 @@ void LoadINIFile(void)
 	GetPrivateProfileString("Settings","AutoBalance","1",szTemp	,256,INIFileName);	cpuAutoBalance		= atoi(szTemp);
 }
 
-void SaveINIFile(void)
+void SaveINIFile()
 {
 	char  *pName = GetCharInfo()->Name;
 	char  szTemp1[256];
@@ -447,7 +447,7 @@ void CpuLoadCommand(PSPAWNINFO pCHAR, PCHAR szLine)
 
 
 // Called once, when the plugin is to initialize
-PLUGIN_API VOID InitializePlugin(VOID)
+PLUGIN_API VOID InitializePlugin()
 {
     DebugSpewAlways("Initializing MQ2CpuLoad");
 	AddCommand("/cpu",CpuLoadCommand);
@@ -455,18 +455,18 @@ PLUGIN_API VOID InitializePlugin(VOID)
 }
 
 // Called once, when the plugin is to shutdown
-PLUGIN_API VOID ShutdownPlugin(VOID)
+PLUGIN_API VOID ShutdownPlugin()
 {
     DebugSpewAlways("Shutting down MQ2CpuLoad");
 	RemoveCommand("/cpu");
 	if (myCpuData) {
 		memset(myCpuData,0,sizeof(trCPUDATA));
-		myCpuData = NULL;
+		myCpuData = nullptr;
 	}
 }
 
 // Called after entering a new zone
-PLUGIN_API VOID OnZoned(VOID)
+PLUGIN_API VOID OnZoned()
 {
     DebugSpewAlways("MQ2CpuLoad::OnZoned()");
 	CpuLoadUpdate(GetTickCount64(), true, true, true);
@@ -482,12 +482,12 @@ PLUGIN_API VOID SetGameState(DWORD GameState)
 		LoadINIFile();
 		CpuLoadUpdate(GetTickCount64(), true, true, true);
 	}
-    // create custom windows if theyre not set up, etc
+    // create custom windows if they're not set up, etc
 }
 
 
 // This is called every time MQ pulses
-PLUGIN_API VOID OnPulse(VOID)
+PLUGIN_API VOID OnPulse()
 {
 	static uint64_t tick  = 0;
 	static uint64_t tock  = 0;
@@ -498,7 +498,7 @@ PLUGIN_API VOID OnPulse(VOID)
 	if (tick - tock > 500)
 	{
 		if (myCpuData)
-			myCpuData->FPS = (float)1000.0 * frame / (float)( 1.0 * tick - tock);
+			myCpuData->FPS = (float)1000.0 * (float)frame / (float)( 1.0 * tick - tock);
 		tock = tick;
 		frame = 0;
 	}
@@ -508,7 +508,7 @@ PLUGIN_API VOID OnPulse(VOID)
 	myCpuData->Foreground = gbInForeground;
 
 	if (tick > myCpuData->LastUpdate + 1000) {
-		CpuLoadUpdate(tick,false, false, false);
+		CpuLoadUpdate(tick, false, false, false);
 		if (myCpuData->MoveRequst) {
 			CpuLoadSet(myCpuData->MoveRequst);
 			myCpuData->MoveRequst = 0;
