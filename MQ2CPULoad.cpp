@@ -61,7 +61,7 @@ typedef struct
 {
 	DWORD	ProcessID;
 	HANDLE	ProcessHandle;
-	DWORD   AffinityMask;
+	DWORD_PTR   AffinityMask;
 	DWORD   MoveRequst;
 	uint64_t LastUpdate;
 	char    CharName[20];
@@ -238,7 +238,7 @@ void CpuLoadUpdate(uint64_t tick, bool name, bool cpu, bool load)
 		//if (cpuReporting) WriteChatf("MQ2CpuLoad::CpuLoadUpdate tick = %d ",myCpuData->LastUpdate);
 		if (cpu) 
 		{
-			DWORD SystemAffinityMask;
+			DWORD_PTR SystemAffinityMask;
 			GetProcessAffinityMask(myProcessHandle,&myCpuData->AffinityMask,&SystemAffinityMask);
 		}
 		if (name)
